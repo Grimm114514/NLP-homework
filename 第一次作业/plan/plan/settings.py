@@ -70,7 +70,10 @@ FEED_EXPORT_ENCODING = 'utf-8'
 #ITEM_PIPELINES = {
 #    "plan.pipelines.PlanPipeline": 300,
 #}
-
+ITEM_PIPELINES = {
+   'plan.pipelines.TxtWriterPipeline': 300,  # <-- 启用这个
+   # 'plan.pipelines.JsonWriterPipeline': 300, # <-- 禁用或删除这个
+}
 # Enable and configure the AutoThrottle extension (disabled by default)
 # See https://docs.scrapy.org/en/latest/topics/autothrottle.html
 #AUTOTHROTTLE_ENABLED = True

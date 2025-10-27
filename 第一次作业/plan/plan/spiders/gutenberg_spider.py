@@ -7,19 +7,25 @@ class GutenbergSpider(scrapy.Spider):
     name = 'gutenberg'
     allowed_domains = ['gutenberg.org']
     
-    # 我们不使用 start_urls，而是重写 start_requests 来指定入口
-    def start_requests(self):
-        # 从 "Top 100 Ebooks" 页面开始
+    # 使用新的 start() 方法 (async def)
+    async def start(self):
+        """
+        爬虫的入口点。
+        """
         yield scrapy.Request(url='https://www.gutenberg.org/browse/scores/top', callback=self.parse_top100)
 
     def parse_top100(self, response):
         """
         这个函数解析 "Top 100" 列表页面。
-        它会找到每本书的链接，例如 /ebooks/1234
+        它会找到每本书的链接 (例如 /ebooks/1234)
         """
-        # 找到所有指向书本的链接 (形如 /ebooks/xxxx)
-        # 这里的 CSS 选择器 'li.booklink a' 是根据古腾堡 "Top 100" 页面的HTML结构来的
-        book_links = response.css('li.booklink a::attr(href)').getall()
+        # 【已修正】使用更准确的 CSS 选择器，只选择 /ebooks/ 开头的链接
+        book_links = response.css('ol li a[href^="/ebooks/"]::attr(href)').getall()
+        
+        if not book_links:
+            self.logger.error(f"在 {response.url} 上没有找到任何 book_links！CSS 选择器可能已失效。")
+            return # 如果没有找到链接，就停止
+
         for link in book_links:
             # response.follow 会自动拼接成完整的 URL
             yield response.follow(link, callback=self.parse_book_page)
@@ -30,20 +36,23 @@ class GutenbergSpider(scrapy.Spider):
         它的目标是找到 "Plain Text UTF-8" 版本的链接。
         """
         # 提取书名
-        # H1 标签的内容是书名
         title = response.css('h1[itemprop="name"]::text').get()
         if not title:
-            # 备用方案（如果h1没取到）
-            title = response.css('h1::text').get()
+            title = response.css('h1::text').get() # 备用方案
             
         # 找到 "Plain Text UTF-8" 文件的链接
-        # 我们使用 XPath 查找文本内容包含 "Plain Text UTF-8" 的 <a> 标签
         text_link = response.xpath('//a[contains(text(), "Plain Text UTF-8")]/@href').get()
 
         if text_link:
-            # 同样，使用 response.follow 来处理相对链接
-            # 我们使用 meta 参数把书名传递给下一个解析函数
-            yield response.follow(text_link, callback=self.parse_text, meta={'title': title, 'url': response.url})
+            # 使用 meta 参数把书名和来源URL传递给下一个解析函数
+            yield response.follow(
+                text_link, 
+                callback=self.parse_text, 
+                meta={
+                    'title': title, 
+                    'source_url': response.url  # 传递详情页的URL，而不是txt文件的URL
+                }
+            )
         else:
             self.logger.warning(f"Could not find 'Plain Text UTF-8' link for: {response.url}")
 
@@ -52,23 +61,21 @@ class GutenbergSpider(scrapy.Spider):
         这是最后一步，解析 .txt 文件。
         这个函数的核心是清理掉古腾堡的法律声明文本。
         """
-        # 从 meta 中取回书名
-        title = response.meta['title']
+        # 从 meta 中取回传递过来的数据
+        title = response.meta.get('title', 'Unknown Title')
+        source_url = response.meta.get('source_url', 'Unknown URL')
         
-        # response.text 包含了 .txt 文件的所有内容
         full_text = response.text
 
         # --- 关键的清理步骤 ---
-        # 找到正文的开始和结束标记
         start_marker = "*** START OF THIS PROJECT GUTENBERG EBOOK"
         end_marker = "*** END OF THIS PROJECT GUTENBERG EBOOK"
         
-        # 有些文本可能是 "START OF THE PROJECT..."
         if start_marker not in full_text:
-            start_marker = "*** START OF THE PROJECT GUTENBERG EBOOK"
+            start_marker = "*** START OF THE PROJECT GUTENBERG EBOOK" # 备用标记
 
         if end_marker not in full_text:
-            end_marker = "*** END OF THE PROJECT GUTENBERG EBOOK"
+            end_marker = "*** END OF THE PROJECT GUTENBERG EBOOK" # 备用标记
 
         start_index = full_text.find(start_marker)
         end_index = full_text.find(end_marker)
@@ -76,21 +83,17 @@ class GutenbergSpider(scrapy.Spider):
         clean_text = ""
 
         if start_index != -1 and end_index != -1:
-            # 找到了标记，提取它们之间的文本
             start_index += len(start_marker) # 移动到标记之后
             clean_text = full_text[start_index:end_index].strip()
         else:
-            # 如果没找到标记（例如，某些非标准的文本），
-            # 我们就记录一个警告，然后（不完美地）使用全部文本
-            self.logger.warning(f"Could not find start/end markers in: {response.url}")
+            self.logger.warning(f"Could not find start/end markers in: {response.url}. Using raw text.")
             clean_text = full_text # 回退方案
         
         # --- 清理完毕 ---
 
-        # 创建 Item
         item = BookItem()
         item['title'] = title.strip() if title else 'Unknown Title'
-        item['url'] = response.meta['url']
+        item['url'] = source_url # 保存书本详情页的URL
         item['text_content'] = clean_text
         
         yield item
