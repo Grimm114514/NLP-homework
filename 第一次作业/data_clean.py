@@ -178,8 +178,8 @@ def clean_corpus(input_file, output_file):
 # --- 主执行部分 ---
 if __name__ == "__main__":
     # 直接在代码中指定输入和输出文件路径
-    input_file = "tutorial/corpus/english_corpus.txt"  # 替换为你的输入文件路径
-    output_file = "tutorial/corpus/cleaned_english_corpus.txt"  # 替换为你的输出文件路径
+    input_file = "plan/corpus.txt"  # 替换为你的输入文件路径
+    output_file = "plan/cleaned_corpus.txt"  # 替换为你的输出文件路径
 
     # 调用接口函数进行清理
     clean_corpus(input_file, output_file)
