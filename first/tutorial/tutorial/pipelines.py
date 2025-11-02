@@ -10,7 +10,7 @@ class TutorialPipeline:
 
     def __init__(self):
         # 【修改点③】: 设置 token 目标
-        self.token_target = 100_000 # 10 万
+        self.token_target = 200_000 # 10 万
         
         # 初始化计数器
         self.token_counts = {
@@ -22,7 +22,6 @@ class TutorialPipeline:
         self.output_dir = 'corpus'
         self.filenames = {
             'en': os.path.join(self.output_dir, 'english_corpus.txt'),
-            'zh': os.path.join(self.output_dir, 'chinese_corpus.txt'),
         }
         
         # 存储文件句柄

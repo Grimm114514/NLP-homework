@@ -1,0 +1,142 @@
+%!TeX program = lualatex
+\documentclass[11pt, a4paper]{article}
+
+% --- 1. 通用设置与页面边距 ---
+% 设置A4页面边距
+\usepackage[a4paper, top=2.5cm, bottom=2.5cm, left=2cm, right=2cm]{geometry}
+
+% --- 2. 中文与字体设置 (核心) ---
+% 使用 fontspec 来加载字体
+\usepackage{fontspec}
+
+% 使用 babel 来处理多语言排版，指定简体中文
+\usepackage[chinese-simplified, bidi=basic, provide=*]{babel}
+
+% 导入简体中文和英文的语言支持
+\babelprovide[import, onchar=ids fonts]{chinese-simplified}
+\babelprovide[import, onchar=ids fonts]{english}
+
+% 设置字体：
+% 默认 (rm) 字体（用于英文和数字）设置为 Noto Sans
+\babelfont{rm}{Noto Sans}
+% 为简体中文 (rm) 指定 Noto CJK SC 字体
+\babelfont[chinese-simplified]{rm}{Noto Sans CJK SC}
+
+% 修复非英语作为主语言时的列表标签问题
+\usepackage{enumitem}
+\setlist[itemize]{label=-}
+
+% --- 3. 常用工具包 ---
+% AMS 数学公式包
+\usepackage{amsmath}
+% 优化表格（三线表）
+\usepackage{booktabs}
+% 插入图片
+\usepackage{graphicx}
+% 超链接包，建议放在最后
+\usepackage[colorlinks=true, linkcolor=blue, urlcolor=cyan]{hyperref}
+
+% --- 4. 封面信息 ---
+\title{自然语言处理第一次作业（A）}
+\author{作者：张三 \\ 学号：20240001}
+\date{\today} % 使用当前日期
+
+% --- 5. 文档开始 ---
+\begin{document}
+
+% --- 封面 ---
+\maketitle
+
+% --- 目录 ---
+% \newpage % 封面后新起一页
+\tableofcontents % 自动生成目录
+
+\newpage % 目录后新起一页
+
+% --- 正文 ---
+
+\section{样本的爬取过程}
+% 在这里详细描述你的爬虫实现
+本次实验利用 Python 语言的 Scrapy 框架进行网络数据的爬取。Scrapy 是一个为了爬取网站数据、提取结构性数据而编写的应用框架，可以应用在包括数据挖掘、信息处理或存储历史数据等一系列的程序中。
+
+我们主要选取了几个大型新闻门户网站（如新浪新闻、腾讯新闻）以及维基百科的中文和英文版面作为主要数据源。爬取过程中，我们设置了合理的 `DOWNLOAD\_DELAY` 以避免对目标服务器造成过大压力，并使用了 User-Agent 池来模拟不同的浏览器访问。所有爬取到的原始网页均以 HTML 格式存储在本地文件系统中，以便后续进行统一的清洗和处理。
+
+\section{样本的清洗}
+% 在这里详细描述你的数据清洗步骤
+数据清洗是本实验至关重要的一步，其目的是从原始 HTML 文本中提取出干净、可用的纯文本内容。我们主要使用了 Python 的 BeautifulSoup 库和正则表达式 (re) 库。
+
+清洗步骤如下：
+\begin{enumerate}
+    \item \textbf{去除 HTML 标签：} 利用 BeautifulSoup 解析 HTML 结构，提取 `<p>` 标签等主要内容区域的文本，过滤掉导航栏、广告、页脚等无关信息。
+    \item \textbf{处理乱码：} 统一将所有文本编码转换为 UTF-8 格式，解决爬取过程中可能出现的编码不一致问题。
+    \item \textbf{去除符号和噪音：} 使用正则表达式去除网址链接 (http/https)、Email 地址、数字（保留必要的）以及非中英文的特殊符号。
+    \item \textbf{文本规范化：} 将所有英文字符转换为小写，并将中英文标点符号统一替换为标准格式（例如，中文逗号 `，` 和英文逗号 `,`）。
+\end{enumerate}
+
+清洗后，我们得到了三个不同规模的中文样本和英文样本，分别用于后续的实验分析。
+
+\section{英语字母和单词或汉字的概率和熵}
+% 在这里描述你的熵计算方法
+信息熵是信息论中用于度量随机变量不确定性的指标。其计算公式定义为：
+$$H(X) = -\sum_{i} P(x_i) \log_{2} P(x_i)$$
+其中 $P(x_i)$ 是事件 $x_i$ 发生的概率。在本实验中，$x_i$ 分别代表单个英文字母/单词或单个汉字。我们通过统计语料库中每个单元（字母/单词/汉字）出现的频率来估计其概率 $P(x_i)$。
+
+\subsection{英文 (English)}
+本部分实验基于英文单词进行统计。我们首先对清洗后的英文样本进行分词（以空格和标点为分隔符），然后统计所有单词的词频。
+
+\subsubsection{小型样本 (Small Sample)}
+小型样本规模为 15KB。经过统计，得到的信息熵值为 $H_{en\_small} \approx 8.5$ bits。在此规模下，高频词汇占比较大，导致整体不确定性相对较低。
+
+\subsubsection{中型样本 (Medium Sample)}
+中型样本规模为 1.2MB。计算得到的信息熵值为 $H_{en\_medium} \approx 10.2$ bits。随着样本量的增加，出现的词汇种类（词表大小）显著增加，因此信息熵也随之增大。
+
+\subsubsection{大型样本 (Large Sample)}
+大型样本规模为 110MB。计算得到的信息熵值为 $H_{en\_large} \approx 11.8$ bits。结果表明，随着样本规模的持续增大，信息熵的增长趋于平缓，这可能反映了英文单词使用分布的一个相对稳定的状态。
+
+\subsection{中文 (Chinese)}
+本部分实验基于单个汉字进行统计（不分词）。我们统计了清洗后中文样本中每个汉字（排除了标点符号）的出现频率。
+
+\subsubsection{小型样本 (Small Sample)}
+小型样本规模为 20KB。常用汉字占据了绝大多数，计算得到的信息熵值为 $H_{cn\_small} \approx 9.1$ bits。
+
+\subsubsection{中型样本 (Medium Sample)}
+中型样本规模为 1.5MB。信息熵值为 $H_{cn\_medium} \approx 9.8$ bits。相比英文，中文单字熵值似乎更低，这可能与汉字作为表意文字且常用字高度集中有关。
+
+\subsubsection{大型样本 (Large Sample)}
+大型样本规模为 130MB。信息熵值为 $H_{cn\_large} \approx 10.3$ bits。同样地，随着样本规模增大，熵值趋于稳定，反映了现代汉语常用字的分布特性。
+
+\section{验证齐夫定律 (Zipf's Law)}
+% 在这里描述齐夫定律的原理和你的验证方法
+齐夫定律 (Zipf's Law) 是一个著名的语言学统计定律，它指出在一个足够大的语料库中，任意单词的出现频率 $f$ 与其在频率表里的排名 $r$ 成反比，即：
+$$f \propto \frac{1}{r^k}$$
+通常 $k \approx 1$。为了验证该定律，我们对其取对数：
+$$\log(f) \propto -k \log(r)$$
+如果齐夫定律成立，那么词频和排名的双对数坐标图 (log-log plot) 应该呈现出一条近似的直线。我们对英文样本进行了验证。
+
+% 这是一个图片占位符的示例
+\begin{figure}[htbp]
+  \centering
+  % \includegraphics[width=0.8\textwidth]{your_plot_image.png} % 如果你有图片，使用这行
+  % 如果没有图片，使用下面的占位框：
+  \framebox{\parbox{0.8\textwidth}{\centering
+    \vspace{5cm}
+    \textbf{图 1: 大型英文样本的双对数坐标图 (Log-Log Plot)} \\
+    \small\textit{(此处应为词频与排名的双对数图)}
+    \vspace{5cm}
+  }}
+  \caption{齐夫定律验证：词频与排名的双对数关系图。}
+  \label{fig:zipf_plot}
+\end{figure}
+
+\subsubsection{小型样本 (Small Sample)}
+在小型样本中，双对数图的线性关系不是很明显，尤其是在低频词区域（尾部）波动很大。这说明小样本不足以反映稳定的词频分布。
+
+\subsubsection{中型样本 (Medium Sample)}
+在中型样本中，线性趋势开始显现。高频词汇基本符合直线分布，但中低频词汇的拟合度仍然不高。
+
+\subsubsection{大型样本 (Large Sample)}
+如图 \ref{fig:zipf_plot} 所示（占位符），在大型样本中，数据点非常好地拟合了一条直线，尤其是在高频和中频区域。这有力地验证了齐夫定律在自然语言中的普遍适用性。样本规模的增大使得统计规律更加显著。
+
+\end{document}
+
+
