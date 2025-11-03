@@ -1,12 +1,9 @@
 import re
 import sys
 
-# --- 用户指定路径 ---
-# 请在这里替换您的输入文件路径
+
 inputfile = "tutorial/corpus/english_corpus.txt"
-# 请在这里替换您的输出文件路径
 outputfile = "tutorial/corpus/cleaned_corpus.txt"
-# --------------------
 
 # 用于跟踪已处理过的行，实现高效去重
 seen_lines = set()
