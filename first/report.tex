@@ -39,10 +39,39 @@
 \fancyhf{} % 清空默认设置
 \fancyfoot[C]{\thepage} % 页码居中底部
 \section{样本的爬取过程}
-本次实验利用 Python 语言的 Scrapy 框架进行网络数据的爬取。Scrapy 是一个为了爬取网站数据、提取结构性数据而编写的应用框架。
 
-我们主要选取了几个大型新闻门户网站以及维基百科的中文和英文版面作为主要数据源。爬取过程中，我们设置了合理的 `DOWNLOAD\_DELAY`（注意这里的下划线需要转义） 以避免对目标服务器造成过大压力。所有爬取到的原始网页均以 HTML 格式存储在本地文件系统中。
+本次实验利用 Python 语言的 Scrapy 框架进行网络数据的爬取。Scrapy 是一个为了爬取网站数据、提取结构性数据而编写的高效、异步的应用框架，它允许开发者通过定义“爬虫”（Spiders）来实现复杂的抓取逻辑。
 
+本实验的核心爬取逻辑由两个 Spider 类（`arxiv\_spider.py` 和 `sina\_tech.py`）定义，它们分别针对 $arXiv$ 和新浪新闻这两个数据源。
+
+\subsection{$arXiv$ 论文数据爬取 (arxiv\_spider.py)}
+
+$arXiv$ 数据源的爬取目标是获取计算机科学（CS）领域（包括人工智能 `cs.AI`、计算语言学 `cs.CL` 和计算机视觉 `cs.CV`）的最新论文文本：
+
+\begin{enumerate}
+    \item \textbf{起始点 (\texttt{parse} 方法):} 爬虫从 \texttt{start\_urls} 中定义的 \texttt{/recent} 列表页开始。在此页面，它使用 CSS 选择器 (\texttt{response.css}) 查找所有指向论文摘要页（\texttt{/abs/...}）的链接，并使用 \texttt{response.follow} 生成新的请求，将响应(response)交由 \texttt{parse\_abstract} 方法处理。
+
+    \item \textbf{摘要爬取 (\texttt{parse\_abstract} 方法)} 
+    \begin{itemize}
+        \item 爬虫执行如下方案：\textbf{仅提取当前页面的论文摘要（Abstract）文本}。摘要文本位于 \texttt{<blockquote>} 标签中。
+    \end{itemize}
+
+    \item \textbf{内容提取 (\texttt{parse\_html\_paper} / \texttt{parse\_abstract}):} 如果执行优先策略，爬虫会进入 \texttt{parse\_html\_paper} 方法，提取全文内容；如果执行备选策略，则在 \texttt{parse\_abstract} 方法中提取摘要内容。
+\end{enumerate}
+
+\subsection{新浪新闻数据爬取 (sina\_tech.py)}
+
+\texttt{sina\_tech.py} 爬虫的逻辑相对直接。它从首页开始，在 \texttt{parse} 方法中使用 XPath (\texttt{response.xpath}) 筛选出所有符合新浪文章 URL 特征（包含 \texttt{/doc-} 和 \texttt{.shtml}）的链接。随后，它跟进这些链接，并在 \texttt{parse\_article} 方法中，使用 XPath 精确提取文章的\textbf{标题、发布时间、来源}和\textbf{正文}（\texttt{div\#artibody}）等结构化数据。
+
+\subsection{核心爬取配置 (settings.py)}
+
+为了确保爬取过程的高效、稳定和友好，我们在 \texttt{settings.py} 文件中进行如下参数设置：
+
+\begin{enumerate}
+    \item \textbf{友好性策略：} 为了避免对目标服务器造成过大压力，我们组合使用了 \texttt{ROBOTSTXT\_OBEY = True}（严格遵守网站的 \texttt{robots.txt} 爬取协议）和 \texttt{DOWNLOAD\_DELAY = 1}（设置 1 秒的下载延迟）。
+    \item \textbf{身份伪装：} 我们将 \texttt{USER\_AGENT} 设置为通用的 Chrome 浏览器标识，以模拟正常的用户访问，这是爬虫反屏蔽的常见策略。
+    \item \textbf{数据编码：} 鉴于新浪新闻包含大量中文文本，我们明确设置 \texttt{FEED\_EXPORT\_ENCODING = "utf-8"}。
+\end{enumerate}
 \section{样本的清洗}
 数据清洗是本实验至关重要的一步，其目的是从原始 HTML 文本中提取出干净、可用的纯文本内容。我们主要使用了 Python 的 BeautifulSoup 库和正则表达式 (re) 库。
 
