@@ -42,7 +42,7 @@
 
 本次实验利用 Python 语言的 Scrapy 框架进行网络数据的爬取。Scrapy 是一个为了爬取网站数据、提取结构性数据而编写的高效、异步的应用框架，它允许开发者通过定义“爬虫”（Spiders）来实现复杂的抓取逻辑。
 
-本实验的核心爬取逻辑由两个 Spider 类（`arxiv\_spider.py` 和 `sina\_tech.py`）定义，它们分别针对 $arXiv$ 和新浪新闻这两个数据源。
+本实验的核心爬取逻辑由两个 Spider 类（'arxiv\_spider.py' 和 'sina\_tech.py'）定义，它们分别针对 $arXiv$ 和新浪新闻这两个数据源。
 
 \subsection{$arXiv$ 论文数据爬取 (arxiv\_spider.py)}
 
@@ -53,41 +53,53 @@ $arXiv$ 数据源的爬取目标是获取计算机科学（CS）领域（包括�
 
     \item \textbf{摘要爬取 (\texttt{parse\_abstract} 方法)} 
     \begin{itemize}
-        \item 爬虫执行如下方案：\textbf{仅提取当前页面的论文摘要（Abstract）文本}。摘要文本位于 \texttt{<blockquote>} 标签中。
+        \item 爬虫执行如下方案：仅提取当前页面的论文摘要。摘要文本位于 \texttt{<blockquote>} 标签中。
     \end{itemize}
 
-    \item \textbf{内容提取 (\texttt{parse\_html\_paper} / \texttt{parse\_abstract}):} 如果执行优先策略，爬虫会进入 \texttt{parse\_html\_paper} 方法，提取全文内容；如果执行备选策略，则在 \texttt{parse\_abstract} 方法中提取摘要内容。
+    \item \textbf{内容提取 (\texttt{parse\_html\_paper} / \texttt{parse\_abstract}):} 在 \texttt{parse\_abstract} 方法中提取摘要内容。
 \end{enumerate}
 
 \subsection{新浪新闻数据爬取 (sina\_tech.py)}
 
-\texttt{sina\_tech.py} 爬虫的逻辑相对直接。它从首页开始，在 \texttt{parse} 方法中使用 XPath (\texttt{response.xpath}) 筛选出所有符合新浪文章 URL 特征（包含 \texttt{/doc-} 和 \texttt{.shtml}）的链接。随后，它跟进这些链接，并在 \texttt{parse\_article} 方法中，使用 XPath 精确提取文章的\textbf{标题、发布时间、来源}和\textbf{正文}（\texttt{div\#artibody}）等结构化数据。
+\texttt{sina\_tech.py} 爬虫的逻辑相对直接。它从首页开始，在 \texttt{parse} 方法中使用 XPath (\texttt{response.xpath}) 筛选出所有符合新浪文章 URL 特征（包含 \texttt{/doc-} 和 \texttt{.shtml}）的链接。随后，它跟进这些链接，并在 \texttt{parse\_article} 方法中，使用 XPath 精确提取文章的标题、发布时间、来源和正文等结构化数据。
 
 \subsection{核心爬取配置 (settings.py)}
 
-为了确保爬取过程的高效、稳定和友好，我们在 \texttt{settings.py} 文件中进行如下参数设置：
+为了确保爬取过程的高效、稳定和友好，在 \texttt{settings.py} 文件中进行如下参数设置：
 
 \begin{enumerate}
-    \item \textbf{友好性策略：} 为了避免对目标服务器造成过大压力，我们组合使用了 \texttt{ROBOTSTXT\_OBEY = True}（严格遵守网站的 \texttt{robots.txt} 爬取协议）和 \texttt{DOWNLOAD\_DELAY = 1}（设置 1 秒的下载延迟）。
-    \item \textbf{身份伪装：} 我们将 \texttt{USER\_AGENT} 设置为通用的 Chrome 浏览器标识，以模拟正常的用户访问，这是爬虫反屏蔽的常见策略。
-    \item \textbf{数据编码：} 鉴于新浪新闻包含大量中文文本，我们明确设置 \texttt{FEED\_EXPORT\_ENCODING = "utf-8"}。
+    \item \textbf{友好性策略：} 为了避免对目标服务器造成过大压力，组合使用 \texttt{ROBOTSTXT\_OBEY = True}（严格遵守网站的 \texttt{robots.txt} 爬取协议）和 \texttt{DOWNLOAD\_DELAY = 1}（设置 1 秒的下载延迟）。
+    \item \textbf{身份伪装：} 将 \texttt{USER\_AGENT} 设置为通用的 Chrome 浏览器标识，以模拟正常的用户访问，这是爬虫反屏蔽的常见策略。
+    \item \textbf{数据编码：} 鉴于新浪新闻包含大量中文文本，明确设置 \texttt{FEED\_EXPORT\_ENCODING = "utf-8"}。
 \end{enumerate}
 \section{样本的清洗}
-数据清洗是本实验至关重要的一步，其目的是从原始 HTML 文本中提取出干净、可用的纯文本内容。我们主要使用了 Python 的 BeautifulSoup 库和正则表达式 (re) 库。
+数据清洗是本实验至关重要的一步，其目的是从爬取原始文本中提取出干净、可用的纯文本内容。我们主要使用了 Python 的 BeautifulSoup 库和正则表达式 (re) 库。
 
-清洗步骤如下：
+\subsection{中文处理}
+对于新浪新闻的中文文本，我们进行了以下清洗步骤：
 \begin{enumerate}
-    \item \textbf{去除 HTML 标签：} 使用 BeautifulSoup 的 \texttt{get\_text()} 方法提取所有文本。
-    \item \textbf{去除脚本和样式：} 剔除 \texttt{<script>} 和 \texttt{<style>} 标签内的内容。
-    \item \textbf{去除无效字符：} 使用正则表达式去除多余的空白符、换行符和特殊控制字符。
+    \item \textbf{移除特定噪音：} 移除特定的广告（如 炒股就看...）、系统残留（如 Flash Player...）和免责声明等。
+    \item \textbf{移除 URL 和邮件：} 移除多种格式的作者、来源、责编等信息（如 \texttt{(来源：...)} 或 \texttt{(责编|记者...)}）。
+    \item \textbf{去除无效字符：} 去除多余的空白符、换行符和特殊控制字符。
     \item \textbf{统一编码：} 所有文本统一保存为 UTF-8 编码。
+\end{enumerate}
+
+\subsection{英文处理}
+对于 $arXiv$ 论文的英文文本，清洗步骤包括：
+\begin{enumerate}
+    \item \textbf{移除元数据：} 移除特定的 \texttt{\textbackslash s*} 标签。
+    \item \textbf{文本标准化：} 将所有文本转换为小写，使用 \texttt{cleaned\_line.lower()}。
+    \item \textbf{移除格式化残留：} 移除如 \texttt{textbf} 或 \texttt{textit} 这样的格式前缀。
+    \item \textbf{严格字符过滤：} 移除所有非字母和非空白字符（即数字和标点）。
+    \item \textbf{规范化空白：} 将多个连续空白压缩为单个空格。
+    \item \textbf{去重与写入：} 使用 \texttt{set} 集合 (\texttt{seen\_lines}) 检查，跳过已存在的行。
 \end{enumerate}
 
 最终，我们得到了三个不同规模的中文和英文语料库：
 \begin{itemize}
-    \item \textbf{小规模样本：} 约 1MB 文本。
-    \item \textbf{中规模样本：} 约 10MB 文本。
-    \item \textbf{大规模样本：} 约 100MB 文本。
+    \item \textbf{小规模样本：} 中文约 150KB 文本，英文约700KB。
+    \item \textbf{中规模样本：} 中文约 250KB 文本，英文约900KB。
+    \item \textbf{大规模样本：} 中文约 350KB 文本，英文约1500KB。
 \end{itemize}
 
 \section{英语字母和单词或汉字的概率和熵}
