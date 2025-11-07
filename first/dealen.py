@@ -28,11 +28,13 @@ OUTPUT_CHART_FILE = 'word_comparison_chart.png'
 OUTPUT_TABLE_PREFIX = 'word_top_n_'
 
 # --- 字体配置 (!! 关键 !!) ---
-FONT_PATH = 'C:/Windows/Fonts/arial.ttf' # (Arial 字体)
+# 使用支持中文的字体
+FONT_PATH = 'C:/Windows/Fonts/simsun.ttc'  # 宋体，支持中文
 FONT_SIZE = 16
 IMAGE_PADDING = 20
 
-MATPLOTLIB_FONT_NAME = 'Arial'
+# matplotlib 中文字体配置
+MATPLOTLIB_FONT_NAME = 'SimSun'  # 宋体
 
 # --- 分析配置 ---
 WORD_REGEX = re.compile(r'\b\w+\b')
@@ -124,11 +126,15 @@ def create_comparison_chart(results_data, output_filename):
     """
     print(f"\n--- 正在生成对比图: {output_filename} ---")
 
+    # 配置matplotlib支持中文显示
     try:
-        plt.rcParams['font.sans-serif'] = [MATPLOTLIB_FONT_NAME]
+        plt.rcParams['font.sans-serif'] = ['SimSun', 'Microsoft YaHei', 'DejaVu Sans']
         plt.rcParams['axes.unicode_minus'] = False
+        print("成功设置中文字体")
     except Exception as e:
-        print(f"警告: 设置字体 '{MATPLOTLIB_FONT_NAME}' 失败: {e}")
+        print(f"警告: 设置字体失败: {e}")
+        # 备用方案：使用系统默认字体
+        plt.rcParams['font.family'] = 'sans-serif'
 
     labels = [os.path.basename(r['file']) for r in results_data]
     totals = [r['stats']['total'] for r in results_data]
@@ -164,11 +170,29 @@ def create_comparison_chart(results_data, output_filename):
 def main():
     all_results = []
 
-    try:
-        pil_font = ImageFont.truetype(FONT_PATH, FONT_SIZE)
-    except IOError:
-        print(f"错误: 字体文件 '{FONT_PATH}' 未找到。")
-        pil_font = None
+    # 尝试加载支持中文的字体
+    font_paths = [
+        'C:/Windows/Fonts/simsun.ttc',      # 宋体
+        'C:/Windows/Fonts/msyh.ttc',        # 微软雅黑
+        'C:/Windows/Fonts/simhei.ttf',      # 黑体
+        'C:/Windows/Fonts/arial.ttf'        # 备用英文字体
+    ]
+    
+    pil_font = None
+    for font_path in font_paths:
+        try:
+            pil_font = ImageFont.truetype(font_path, FONT_SIZE)
+            print(f"成功加载字体: {font_path}")
+            break
+        except IOError:
+            continue
+    
+    if pil_font is None:
+        print("警告: 未找到合适的字体文件，将使用默认字体。")
+        try:
+            pil_font = ImageFont.load_default()
+        except:
+            pil_font = None
 
     for filepath in INPUT_FILES:
         print(f"\n{'='*20}{filepath} {'='*20}")

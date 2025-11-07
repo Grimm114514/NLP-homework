@@ -182,16 +182,38 @@ $$ H(X) = - \sum_{i=1}^{n} P(x_i) \log_2 P(x_i) $$
 \subsection{英文}
 对于英文，我们以“单词”（Word）为单位进行统计。
 
-\subsubsection{小规模样本}
+\subsubsection{结果}
 
-\paragraph{单词熵：} （分析...）
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth, height=15cm]{word_top_n_100000en}
+    \caption{小规模样本的单词频率和信息熵}
+    \label{fig:small_scale}
+\end{figure}
 
-\subsubsection{中规模样本}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth, height=15cm]{word_top_n_150000en}
+    \caption{中规模样本的单词频率和信息熵}
+    \label{fig:medium_scale}
+\end{figure}
 
-\paragraph{单词熵：} （分析...）
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth, height=15cm]{word_top_n_200000en}
+    \caption{大规模样本的单词频率和信息熵}
+    \label{fig:large_scale}
+\end{figure}
 
-\subsubsection{大规模样本}
-\paragraph{单词熵：} （分析...）
+\subsubsection{横向对比}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth, height=18cm]{word_comparison_chart}
+    \caption{横向对比}
+    \label{fig:comparison}
+\end{figure}
+\paragraph{分析}
 
 \section{验证齐夫定律 (Zipf's Law)}
 齐夫定律指出，在一个大型语料库中，任意单词的出现频率 $f$ 与其在频率表中的排名 $r$ 成反比，即：
