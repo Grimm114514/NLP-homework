@@ -220,6 +220,9 @@ $$ H(X) = - \sum_{i=1}^{n} P(x_i) \log_2 P(x_i) $$
 $$ f \propto \frac{1}{r} $$
 取对数后，$\log(f)$ 和 $\log(r)$ 应呈线性关系。我们仅对英文样本进行单词级别的验证。
 
+\paragraph{验证方法}
+使用 Python 实现验证逻辑：首先统计单词频率并按频率降序排列。然后计算词频与排名的对数值，通过 \texttt{numpy.polyfit} 进行线性拟合，获得斜率参数。
+
 \subsection{小规模样本}
 （分析...）
 
