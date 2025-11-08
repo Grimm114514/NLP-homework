@@ -1,4 +1,3 @@
-
 \documentclass[11pt, a4paper]{ctexart} % <-- 改用 ctexart 文档类
 
 % --- 1. 通用设置与页面边距 ---
@@ -40,39 +39,36 @@
 \fancyhf{} % 清空默认设置
 \fancyfoot[C]{\thepage} % 页码居中底部
 \section{样本的爬取过程}
-
-本次实验利用 Python 语言的 Scrapy 框架进行网络数据的爬取。Scrapy 是一个为了爬取网站数据、提取结构性数据而编写的高效、异步的应用框架，它允许开发者通过定义“爬虫”（Spiders）来实现复杂的抓取逻辑。
-
-本实验的核心爬取逻辑由两个 Spider 类（'arxiv\_spider.py' 和 'sina\_tech.py'）定义，它们分别针对 $arXiv$ 和新浪新闻这两个数据源。
-
+本次实验使用 Python 的 Scrapy 框架构建两个定制爬虫，分别采集英文科研论文摘要（$arXiv$）与中文科技新闻（新浪科技频道）文本语料本实验的主要采集逻辑由两个 Spider 类（`arxiv_spider.py` 与 `sina_tech.py`）实现，对应两个异质数据源：学术论文摘要与新闻报道。二者在页面结构复杂度、语料语言特征及更新节奏方面具有显著差异，因而在解析策略与节流配置上采取了区分化设计。
 \subsection{$arXiv$ 论文数据爬取 (arxiv\_spider.py)}
 
-$arXiv$ 数据源的爬取目标是获取计算机科学（CS）领域（包括人工智能 `cs.AI`、计算语言学 `cs.CL` 和计算机视觉 `cs.CV`）的最新论文文本：
+采集目标：获取计算机科学领域近期论文摘要，限定在人工智能 (`cs.AI`)、计算语言学 (`cs.CL`) 与计算机视觉 (`cs.CV`) 等分类下的最新条目。整体流程概述如下：
 
 \begin{enumerate}
-    \item \textbf{起始点 (\texttt{parse} 方法):} 爬虫从 \texttt{start\_urls} 中定义的 \texttt{/recent} 列表页开始。在此页面，它使用 CSS 选择器 (\texttt{response.css}) 查找所有指向论文摘要页（\texttt{/abs/...}）的链接，并使用 \texttt{response.follow} 生成新的请求，将响应(response)交由 \texttt{parse\_abstract} 方法处理。
-
-    \item \textbf{摘要爬取 (\texttt{parse\_abstract} 方法)} 
-    \begin{itemize}
-        \item 爬虫执行如下方案：仅提取当前页面的论文摘要。摘要文本位于 \texttt{<blockquote>} 标签中。
-    \end{itemize}
-
-    \item \textbf{内容提取 (\texttt{parse\_html\_paper} / \texttt{parse\_abstract}):} 在 \texttt{parse\_abstract} 方法中提取摘要内容。
+    \item \textbf{入口解析 (\texttt{parse}):} 从 \texttt{start\_urls} 指向的 \texttt{/recent} 页面启动，利用 CSS 选择器提取指向具体论文摘要页（\texttt{/abs/...}）的链接，并通过 \texttt{response.follow} 派发至摘要解析回调。
+    \item \textbf{摘要抽取 (\texttt{parse\_abstract}):} 在摘要页中定位 \texttt{<blockquote>} 标签并提取其纯文本内容，只抓取摘要。
+    \item \textbf{结构规整:} 在抽取后进行基础清洗，以便后续英文文本规范化与统计处理。
 \end{enumerate}
 
 \subsection{新浪新闻数据爬取 (sina\_tech.py)}
 
-\texttt{sina\_tech.py} 爬虫的逻辑相对直接。它从首页开始，在 \texttt{parse} 方法中使用 XPath (\texttt{response.xpath}) 筛选出所有符合新浪文章 URL 特征（包含 \texttt{/doc-} 和 \texttt{.shtml}）的链接。随后，它跟进这些链接，并在 \texttt{parse\_article} 方法中，使用 XPath 精确提取文章的标题、发布时间、来源和正文等结构化数据。
+该 Spider 针对新浪科技频道最新页面的资讯类内容。与论文摘要的层次化链接结构不同，新闻页在首页已暴露大量正文链接，因此策略更强调批量筛选与字段精准抽取：
+\begin{enumerate}
+    \item \textbf{链接发现:} 在首页使用 XPath 表达式筛选包含特征片段（\texttt{/doc-} 与 \texttt{.shtml}）的文章 URL，规避导航与多媒体类非正文页面。
+    \item \textbf{正文解析 (\texttt{parse\_article}):} 对每篇文章提取标题、发布时间、来源与主体段落等字段，确保生成结构化条目；解析时通过 XPath 精准定位，减少对页面样式变动的敏感性。
+    \item \textbf{异常与冗余控制:} 对为空标题或缺失正文的响应进行跳过；避免重复抓取同一链接（依赖 Scrapy 默认去重机制）。
+\end{enumerate}
 
 \subsection{核心爬取配置 (settings.py)}
 
-为了确保爬取过程的高效、稳定和友好，在 \texttt{settings.py} 文件中进行如下参数设置：
-
+为提升采集的遵从性、稳定性与文本可用性，在 `settings.py` 中配置关键参数：
 \begin{enumerate}
-    \item \textbf{友好性策略：} 为了避免对目标服务器造成过大压力，组合使用 \texttt{ROBOTSTXT\_OBEY = True}（严格遵守网站的 \texttt{robots.txt} 爬取协议）和 \texttt{DOWNLOAD\_DELAY = 1}（设置 1 秒的下载延迟）。
-    \item \textbf{身份伪装：} 将 \texttt{USER\_AGENT} 设置为通用的 Chrome 浏览器标识，以模拟正常的用户访问，这是爬虫反屏蔽的常见策略。
-    \item \textbf{数据编码：} 鉴于新浪新闻包含大量中文文本，明确设置 \texttt{FEED\_EXPORT\_ENCODING = "utf-8"}。
+    \item \textbf{访问友好策略:} \texttt{ROBOTSTXT\_OBEY = True} 强制遵守目标站点的爬取协议； \texttt{DOWNLOAD\_DELAY = 1} 设置 1 秒请求延迟，降低瞬时并发压力，减少被限速或封禁风险。
+    \item \textbf{User-Agent 伪装:} 设置模拟常见 Chrome 浏览器标识的 \texttt{USER\_AGENT}，提升页面响应一致性并减少触发反爬策略的概率。
+    \item \textbf{编码统一:} 明确 \texttt{FEED\_EXPORT\_ENCODING = "utf-8"}，保证中文文本在导出阶段不出现乱码，方便后续跨平台处理与统计。
 \end{enumerate}
+
+上述双源并行抓取策略在结构复杂度与内容粒度上实现互补：英文侧强调学术摘要的领域聚焦与可控泛化性；中文侧强调新闻更新的时效性与语域多样性。二者结合为后续的信息熵与齐夫分布验证提供跨语言、跨体裁的对比基底。
 \section{样本的清洗}
 数据清洗是本实验至关重要的一步，其目的是从爬取原始文本中提取出干净、可用的纯文本内容。我们主要使用了 Python 的 BeautifulSoup 库和正则表达式 (re) 库。
 
@@ -143,6 +139,7 @@ $$ H(X) = - \sum_{i=1}^{n} P(x_i) \log_2 P(x_i) $$
     \label{fig:comparison}
 \end{figure}
 \paragraph{分析}
+
 根据图表数据分析，\texttt{100cn\_cleaned.txt}、\texttt{150cn\_cleaned.txt} 和 \texttt{200cn\_cleaned.txt} 三个文本文件的汉字信息熵变化呈现先升后降（9.5298 $\to$ 9.5574 $\to$ 9.5265）的非线性趋势。
 
 这一现象清晰地表明，影响信息熵的核心因素是文本的“主题内容”及其决定的“汉字概率分布”，而非文本规模本身。下面我们分阶段进行详细论证：
@@ -214,6 +211,14 @@ $$ H(X) = - \sum_{i=1}^{n} P(x_i) \log_2 P(x_i) $$
     \label{fig:comparison}
 \end{figure}
 \paragraph{分析}
+基于三组英文样本（100K/150K/200K）的统计结果（见 Top-N 表与对比柱状图），可以得到以下观察与结论：
+\begin{enumerate}
+    \item \textbf{信息熵：} 单词信息熵约为 \textbf{10.1900} $\to$ \textbf{10.2136} $\to$ \textbf{10.3102}，稳步上升，说明词频分布整体更加均匀、长尾词汇占比提升，即不确定性增加。
+    \item \textbf{高频词结构：} Top-20 长期由功能词 \textit{and, the, a, to, of, in} 等主导。随着规模扩大，\textit{model, llm, reasoning, method, data, task} 等领域词逐步进入Top-20，显示样本主题对 AI、LLM 等研究语域的偏向。
+    \item \textbf{头尾部变化：} 头部功能词的相对占比基本\textit{稳定或略有下降}，而尾部长尾扩展更明显——这是熵上升的主要来源。结合 Zipf 分析，头部略高与尾部台阶状是未做停用词处理与有限样本离散效应的共同结果。
+\end{enumerate}
+
+综上，随着语料规模的扩大，英文样本呈现出“\textit{熵上升、主题更加凸显（AI/LLM 相关词汇增多）}”的特征；这既符合语言统计的一般规律，也反映了采样来源对语域的影响。
 
 \section{验证齐夫定律 (Zipf's Law)}
 齐夫定律指出，在一个大型语料库中，任意单词的出现频率 $f$ 与其在频率表中的排名 $r$ 成反比，即：
@@ -224,28 +229,43 @@ $$ f \propto \frac{1}{r} $$
 使用 Python 实现验证逻辑：首先统计单词频率并按频率降序排列。然后计算词频与排名的对数值，通过 \texttt{numpy.polyfit} 进行线性拟合，获得斜率参数。
 
 \subsection{小规模样本}
-（分析...）
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{zipf_verification_100000en.png}
+    \caption{小规模样本的 Zipf 定律对数拟合图}
+    \label{fig:zipf_small_scale_new}
+\end{figure}
 
 \subsection{中规模样本}
-（分析...）
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{zipf_verification_150000en.png}
+    \caption{中规模样本的 Zipf 定律对数拟合图}
+    \label{fig:zipf_medium_scale_new}
+\end{figure}
 
 \subsection{大规模样本}
-（分析...）
-我们在大规模样本上的对数-对数坐标图（见图 \ref{fig:zipf_plot}）清晰地展示了这一线性关系，从而验证了齐夫定律。
-
-% 这是一个图片占位符示例
-\begin{figure}[htbp]
-  \centering
-  % 因为我们不能加载外部图片，所以使用一个方框作为占位符
-  \framebox{\parbox{0.8\textwidth}{\centering
-    \vspace{5cm}
-    \textbf{图 1：大规模英文样本的 Zipf 定律拟合图} \\
-    \small (\texttt{log(rank)} vs \texttt{log(frequency)})
-    \vspace{5cm}
-  }}
-  \caption{Zipf 定律对数-对数图}
-  \label{fig:zipf_plot}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{zipf_verification_200000en.png}
+    \caption{大规模样本的 Zipf 定律对数拟合图}
+    \label{fig:zipf_large_scale_new}
 \end{figure}
+
+\paragraph{分析}
+从对数坐标的拟合结果看，三个规模的语料库均表现出词频与排名近似线性相关的特性，这与齐夫定律的预测一致。具体而言，100K、150K 和 200K 词汇语料的回归斜率分别为 -1.171 ($R^2=0.9677$)、-1.211 ($R^2=0.9682$) 和 -1.269 ($R^2=0.9686$)。
+
+\textbf{实验结论与偏差分析：}
+\begin{enumerate}
+    \item \textbf{普遍符合 Zipf 分布：} 所有样本的拟合直线斜率都接近理论值 -1，同时 $R^2$ 均接近 1，表明词频与排名的对数关系具有较高的线性相关性。
+    \item \textbf{高频词区域（头部偏离）：} 在所有图中，曲线的头部（高频词区域）都明显高于拟合的直线。这主要是因为语料未经预处理，大量的冠词、介词等功能词（如 "the", "of", "a"）占据了频率的顶端，其出现频率远超普通内容词，导致了分布的陡峭化。
+    \item \textbf{低频词区域（尾部弯曲与台阶）：} 曲线的尾部出现了明显的向下弯曲和“台阶”状结构。这种现象源于以下几个原因：
+    \begin{itemize}
+        \item \textbf{有限样本效应：} 在有限的语料中，许多稀有词只出现了一次或极少数次，导致在对数坐标尾部形成离散的、水平的“台阶”。
+        \item \textbf{词形未归一：} 实验未进行词形还原，导致同一词根的不同形式被计为不同词条，分散了词频。
+        \item \textbf{数据离散化：} 排名越靠后，词频越低，频率值的变化不再是连续的，这种离散效应在对数图上被放大。
+    \end{itemize}
+\end{enumerate}
 
 % --- 5. 文档结束 ---
 \end{document}

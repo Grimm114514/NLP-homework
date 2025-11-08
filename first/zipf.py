@@ -62,7 +62,10 @@ def calculate_zipf_metrics(word_counts):
     coefficients = np.polyfit(log_ranks, log_freqs, 1)
     slope, intercept = coefficients
     
-    return ranks, sorted_counts, log_ranks, log_freqs, slope, intercept
+    # 计算R²值（拟合优度）
+    r_squared = np.corrcoef(log_ranks, log_freqs)[0, 1] ** 2
+    
+    return ranks, sorted_counts, log_ranks, log_freqs, slope, intercept, r_squared
 
 def plot_zipf_law(results, output_dir="zipf_results"):
     """
@@ -81,7 +84,7 @@ def plot_zipf_law(results, output_dir="zipf_results"):
     
     # 为每个样本单独生成图表
     for i, (file_info, color, label) in enumerate(zip(results, colors, file_labels)):
-        filepath, ranks, freqs, log_ranks, log_freqs, slope, intercept, total_words = file_info
+        filepath, ranks, freqs, log_ranks, log_freqs, slope, intercept, r_squared, total_words = file_info
         
         fig, ax = plt.subplots(1, 1, figsize=(10, 6))
         fig.suptitle(f'{label} - Zipf定律验证 (对数坐标拟合)', fontsize=16, fontweight='bold')
@@ -92,7 +95,7 @@ def plot_zipf_law(results, output_dir="zipf_results"):
         # 拟合线
         fitted_line = slope * log_ranks + intercept
         ax.plot(log_ranks, fitted_line, 'r-', linewidth=2, 
-               label=f'拟合线 (斜率={slope:.3f})')
+               label=f'拟合线 (斜率={slope:.3f}, $R^2$={r_squared:.4f})')
         
         ax.set_title(f'对数坐标拟合\n总词数: {total_words:,}', fontweight='bold')
         ax.set_xlabel('log(排名)')
@@ -120,7 +123,7 @@ def generate_report_table(results, output_dir="zipf_results"):
     table_data = []
     
     for i, file_info in enumerate(results):
-        filepath, ranks, freqs, log_ranks, log_freqs, slope, intercept, total_words = file_info
+        filepath, ranks, freqs, log_ranks, log_freqs, slope, intercept, r_squared, total_words = file_info
         
         # 计算统计指标
         unique_words = len(freqs)
@@ -132,7 +135,8 @@ def generate_report_table(results, output_dir="zipf_results"):
             '文件': os.path.basename(filepath),
             '总词数': total_words,
             '唯一词数': unique_words,
-            '拟合优度R²': f"{np.corrcoef(log_ranks, log_freqs)[0,1]**2:.4f}",
+            '拟合优度R²': f"{r_squared:.4f}",
+            '斜率': f"{slope:.3f}",
             '最高词频': top_word_freq,
             'Top10覆盖率(%)': f"{coverage_top10:.2f}",
             'Top100覆盖率(%)': f"{coverage_top100:.2f}"
@@ -148,6 +152,7 @@ def generate_report_table(results, output_dir="zipf_results"):
             f.write(f"总词数: {data['总词数']:,}\n")
             f.write(f"唯一词数: {data['唯一词数']:,}\n")
             f.write(f"拟合优度R²: {data['拟合优度R²']}\n")
+            f.write(f"拟合斜率: {data['斜率']}\n")
             f.write(f"最高词频: {data['最高词频']:,}\n")
             f.write(f"Top10词汇覆盖率: {data['Top10覆盖率(%)']}%\n")
             f.write(f"Top100词汇覆盖率: {data['Top100覆盖率(%)']}%\n")
@@ -163,17 +168,14 @@ def generate_report_table(results, output_dir="zipf_results"):
     print("语料库统计分析结果")
     print("="*80)
     
-    # 表格标题
-    headers = ['文件', '总词数', '唯一词数', 'R²', 'Top10覆盖率%']
-    
     # 打印表头
-    print(f"{'文件':<15} {'总词数':<10} {'唯一词数':<10} {'R²':<8} {'Top10覆盖率%':<12}")
-    print("-" * 65)
+    print(f"{'文件':<15} {'总词数':<10} {'唯一词数':<10} {'R²':<8} {'斜率':<8} {'Top10覆盖率%':<12}")
+    print("-" * 75)
     
     # 打印数据
     for data in table_data:
         print(f"{data['文件']:<15} {data['总词数']:<10,} {data['唯一词数']:<10,} "
-              f"{data['拟合优度R²']:<8} {data['Top10覆盖率(%)']:<12}")
+              f"{data['拟合优度R²']:<8} {data['斜率']:<8} {data['Top10覆盖率(%)']:<12}")
     
     return table_data
 
@@ -199,11 +201,12 @@ def main():
         print(f"唯一词数: {len(word_counts):,}")
         
         # 计算统计指标
-        ranks, freqs, log_ranks, log_freqs, slope, intercept = calculate_zipf_metrics(word_counts)
+        ranks, freqs, log_ranks, log_freqs, slope, intercept, r_squared = calculate_zipf_metrics(word_counts)
         
-        print(f"拟合优度R²: {np.corrcoef(log_ranks, log_freqs)[0,1]**2:.4f}")
+        print(f"拟合优度R²: {r_squared:.4f}")
+        print(f"拟合斜率: {slope:.3f}")
         
-        results.append((filepath, ranks, freqs, log_ranks, log_freqs, slope, intercept, total_words))
+        results.append((filepath, ranks, freqs, log_ranks, log_freqs, slope, intercept, r_squared, total_words))
     
     if not results:
         print("没有成功处理的文件，请检查文件路径")
