@@ -2,7 +2,16 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
-def train_model(model, train_X, train_y, epochs=50, lr=0.01):
+def train_model(model, train_X, train_y, epochs=200, lr=0.01, device=None):
+    # 确定设备
+    if device is None:
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    
+    # 确保数据和模型在同一设备上
+    train_X = train_X.to(device)
+    train_y = train_y.to(device)
+    model = model.to(device)
+    
     # 1. 定义损失函数 (多分类问题通常用交叉熵)
     criterion = nn.CrossEntropyLoss()
     
