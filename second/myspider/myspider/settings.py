@@ -24,7 +24,8 @@ ROBOTSTXT_OBEY = True
 # Concurrency and throttling settings
 #CONCURRENT_REQUESTS = 16
 CONCURRENT_REQUESTS_PER_DOMAIN = 1
-DOWNLOAD_DELAY = 1
+DOWNLOAD_DELAY = 1.5
+USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
 
 # Disable cookies (enabled by default)
 #COOKIES_ENABLED = False
@@ -56,7 +57,11 @@ DOWNLOAD_DELAY = 1
 #    "scrapy.extensions.telnet.TelnetConsole": None,
 #}
 
-# Configure item pipelines
+# Configure item 
+ITEM_PIPELINES = {
+   'myspider.pipelines.GutenbergPipeline': 300,
+}
+MAX_WORDS_LIMIT = 80000
 # See https://docs.scrapy.org/en/latest/topics/item-pipeline.html
 #ITEM_PIPELINES = {
 #    "myspider.pipelines.MyspiderPipeline": 300,

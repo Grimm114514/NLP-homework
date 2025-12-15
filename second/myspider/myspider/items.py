@@ -1,12 +1,7 @@
-# Define here the models for your scraped items
-#
-# See documentation in:
-# https://docs.scrapy.org/en/latest/topics/items.html
-
+# myspider/items.py
 import scrapy
 
-
-class MyspiderItem(scrapy.Item):
-    # define the fields for your item here like:
-    # name = scrapy.Field()
-    pass
+class GutenbergItem(scrapy.Item):
+    # 我们只需要保存文本内容
+    text_content = scrapy.Field()
+    title = scrapy.Field() # 方便调试看进度，实际训练不用
