@@ -1,65 +1,61 @@
 import re
 
-def aggressive_clean(input_file, output_file):
-    with open(input_file, 'r', encoding='utf-8') as f:
-        text = f.read()
-
-    # --- 1. 维基百科特定清洗 (去元数据) ---
-    text = re.sub(r'\\', ' ', text)
-    text = re.sub(r'\[.*?\]', ' ', text)
-    text = re.sub(r'This .*? is a stub\.', '', text, flags=re.IGNORECASE)
-    text = re.sub(r'You can help Wikipedia by expanding it\.', '', text, flags=re.IGNORECASE)
-    text = re.sub(r'Media related to .*? at Wikimedia Commons', '', text, flags=re.IGNORECASE)
-    text = re.sub(r'http\S+', '', text)
+def clean_and_cut_corpus_strict(input_file, output_file):
+    print(f"正在读取文件: {input_file} ...")
     
-    # --- 2. 预处理 ---
-    # 转小写
-    text = text.lower()
-    # 连字符转空格 (例如 "co-operate" -> "co operate")
-    text = text.replace('-', ' ')
+    try:
+        with open(input_file, 'r', encoding='utf-8') as f:
+            lines = f.readlines()
+    except UnicodeDecodeError:
+        print("UTF-8 读取失败，尝试 GBK 编码...")
+        with open(input_file, 'r', encoding='gbk') as f:
+            lines = f.readlines()
 
-    # --- 3. 去除数字 (新增) ---
-    # 将所有数字替换为空格。
-    # 例如 "born in 1998" -> "born in"
-    text = re.sub(r'\d+', ' ', text)
-
-    # --- 4. 去除标点和特殊符号 ---
-    # 只保留小写字母 (a-z) 和空格
-    text = re.sub(r'[^a-z\s]', ' ', text)
-
-    # --- 5. 去除无意义单字母 (新增) ---
-    words = text.split()
-    cleaned_words = []
+    # 截断一半
+    lines = lines[:len(lines) // 2]
     
-    # 保留逻辑：
-    # 1. 长度大于1的词 (如 "is", "apple")
-    # 2. 或者是特定的有意义单字母: "a" (一个) 和 "i" (我)
-    # 3. 其他单字母如 "b", "c", "x" 等都会被过滤掉
-    valid_single_letters = {'a', 'i'}
+    cleaned_data = []
     
-    for w in words:
-        if len(w) > 1 or w in valid_single_letters:
-            cleaned_words.append(w)
+    # === 正则表达式：只匹配中文字符 ===
+    # \u4e00-\u9fa5 是常用汉字的 Unicode 范围
+    chinese_pattern = re.compile(r'^[\u4e00-\u9fa5]+$')
 
-    # --- 6. 保存 ---
-    final_text = ' '.join(cleaned_words)
-    
+    for line in lines:
+        line = line.strip()
+        if not line: continue
+        
+        tokens = line.split()
+        line_words = []
+        
+        for token in tokens:
+            # 1. 也是先去掉词性标注
+            if '/' in token:
+                # 处理像 [中国/ns 人民/n]nt 这种复杂情况，先去掉 [
+                token = token.replace('[', '')
+                word = token.split('/')[0]
+            else:
+                word = token
+            
+            # 2. 严格过滤：如果不是纯汉字，直接丢弃
+            # 这会把 "1998", "50%", ",", "。" 全部过滤掉
+            if chinese_pattern.match(word):
+                line_words.append(word)
+        
+        # 如果这一行还有剩下的词，就写入
+        # 我们设定一个阈值，比如至少有3个词才算一句话，太短的也没法训练上下文
+        if len(line_words) > 2:
+            cleaned_data.append(" ".join(line_words))
+
     with open(output_file, 'w', encoding='utf-8') as f:
-        f.write(final_text)
-
-    print(f"清洗完成！")
-    print(f"原始词数(估): {len(words)}")
-    print(f"清洗后词数: {len(cleaned_words)}")
+        for line in cleaned_data:
+            f.write(line + '\n')
+            
+    print(f"严格清洗完成！只保留了纯汉字。")
     print(f"结果已保存至: {output_file}")
-    
-    # 打印效果预览
-    print(f"\n预览 (前20个词): {cleaned_words[:20]}")
+    print(f"示例前两行: {cleaned_data[:2]}")
 
 # ================= 运行 =================
-input_filename = '200000en.txt'
-output_filename = 'cleaned_corpus.txt'
+input_filename = 'ChineseCorpus199801_half.txt' 
+output_filename = 'corpus_cleaned_strict.txt'
 
-try:
-    aggressive_clean(input_filename, output_filename)
-except FileNotFoundError:
-    print(f"找不到文件 {input_filename}")
+clean_and_cut_corpus_strict(input_filename, output_filename)
