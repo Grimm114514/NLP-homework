@@ -61,30 +61,15 @@ class CNNModel(nn.Module):
     def __init__(self, vocab_size, embed_dim, seq_len):
         super(CNNModel, self).__init__()
         self.embedding = nn.Embedding(vocab_size, embed_dim)
-        
-        # 1D 卷积层
-        # in_channels = 词向量维度
-        # out_channels = 32 (提取出的特征数量)
-        # kernel_size = 2 (每次看2个相邻词，类似Bigram)
-        self.conv1 = nn.Conv1d(in_channels=embed_dim, out_channels=32, kernel_size=2)
-        
-        # 自适应最大池化，无论前面多长，最后都压缩成1个数
-        self.pool = nn.AdaptiveMaxPool1d(1)
-        
-        # 全连接层
+        self.conv1 = nn.Conv1d(in_channels=embed_dim, out_channels=32, kernel_size=2)       
+        self.pool = nn.AdaptiveMaxPool1d(1)        
         self.fc = nn.Linear(32, vocab_size)
 
     def forward(self, x):
-        # x: [batch, seq_len]
-        embeds = self.embedding(x)          # -> [batch, seq_len, embed_dim]
-        
-        # 关键步骤：CNN 要求的输入格式是 [batch, channel, length]
-        # 所以要把 embed_dim 换到中间去
-        embeds = embeds.permute(0, 2, 1)    # -> [batch, embed_dim, seq_len]
-        
+        embeds = self.embedding(x)
+        embeds = embeds.permute(0, 2, 1)
         x = torch.relu(self.conv1(embeds))
-        x = self.pool(x).squeeze(-1)        # -> [batch, 32]
-        
+        x = self.pool(x).squeeze(-1)   
         return self.fc(x)
 
 # ================= 3. 主训练流程 =================

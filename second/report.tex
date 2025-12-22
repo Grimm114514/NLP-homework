@@ -10,6 +10,7 @@
 \usepackage{xcolor}         % 颜色支持
 \usepackage{hyperref}       % 目录跳转和超链接
 \usepackage{caption}        % 图表标题格式
+\usepackage{subcaption}
 
 % ==================== 页面设置 ====================
 \geometry{left=2.5cm, right=2.5cm, top=2.5cm, bottom=2.5cm}
@@ -28,7 +29,8 @@
     stringstyle=\color{codepurple},
     basicstyle=\ttfamily\footnotesize,
     breakatwhitespace=false,         
-    breaklines=true,                 
+    breaklines=true,
+    postbreak=\mbox{\textcolor{red}{$\hookrightarrow$}\space},
     captionpos=b,                    
     keepspaces=true,                 
     numbers=left,                    
@@ -36,7 +38,8 @@
     showspaces=false,                
     showstringspaces=false,
     showtabs=false,                  
-    tabsize=2
+    tabsize=2,
+    columns=flexible
 }
 \lstset{style=mystyle, language=Python}
 
@@ -47,6 +50,8 @@
 
 % ==================== 正文开始 ====================
 \begin{document}
+
+\pagestyle{plain} % 页面顶部不显示标注，仅在底部显示页码
 
 % 封面
 \maketitle
@@ -65,7 +70,7 @@
 主要任务包括：
 \begin{enumerate}
     \item 数据预处理：清洗语料，构建词表，将文本转换为索引序列。
-    \item 模型构建：分别搭建 RNN 和 CNN 模型，完成下一词预测任务。
+    \item 模型构建：分别搭建 RNN 和 CNN 模型。
     \item 词向量提取：从 Embedding 层获取词向量。
     \item 对比分析：计算并对比两个模型生成的词向量在语义相似度上的表现。
 \end{enumerate}
@@ -82,16 +87,24 @@ RNN 模型通过捕捉序列的时间依赖性来学习语义。本实验采用�
     \item \textbf{RNN 层}：处理输入序列，保留上下文信息。
     \item \textbf{全连接层}：将最后一个时间步的隐状态映射为词表概率分布。
 \end{itemize}
-
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.6\textwidth]{./figures/RNN.png}
+    \caption{RNN 模型结构示意图}
+\end{figure}
 \subsubsection{CNN 模型 }
 CNN 模型通过滑动窗口提取局部特征。本实验结构如下：
 \begin{itemize}
     \item \textbf{Embedding 层}：同上。
-    \item \textbf{Conv1d 层}：一维卷积，核大小为 2 (类似于 Bi-gram 特征)。
+    \item \textbf{Conv1d 层}：一维卷积，核大小为 2 。
     \item \textbf{Max Pooling 层}：全局最大池化，提取最显著特征。
     \item \textbf{全连接层}：输出预测概率。
 \end{itemize}
-
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.6\textwidth]{./figures/CNN.png}
+    \caption{CNN 模型结构示意图}
+\end{figure}
 \subsection{实验参数设置}
 \begin{table}[H]
     \centering
@@ -100,12 +113,12 @@ CNN 模型通过滑动窗口提取局部特征。本实验结构如下：
         \toprule
         \textbf{参数名} & \textbf{数值} \\
         \midrule
-        词表大小 (Vocab Size) & 1000 \\
-        词向量维度 (Embed Dim) & 16 \\
-        输入序列长度 (Seq Len) & 5 \\
-        批大小 (Batch Size) & 64 \\
-        学习率 (Learning Rate) & 0.001 \\
-        训练轮数 (Epochs) & 15 \\
+        词表大小  & 1000 \\
+        词向量维度  & 15 \\
+        输入序列长度  & 5 \\
+        批大小  & 64 \\
+        学习率  & 0.001 \\
+        训练轮数  & 30 \\
         \bottomrule
     \end{tabular}
 \end{table}
@@ -122,7 +135,7 @@ CNN 模型通过滑动窗口提取局部特征。本实验结构如下：
 \end{itemize}
 
 \subsection{核心代码实现}
-以下为 RNN 模型定义的关键代码片段：
+下为 RNN 模型定义的关键代码片段：
 
 \begin{lstlisting}
 class RNNModel(nn.Module):
@@ -137,62 +150,64 @@ class RNNModel(nn.Module):
         out, _ = self.rnn(embeds)
         return self.fc(out[:, -1, :])
 \end{lstlisting}
-
+下为 CNN 模型定义的关键代码片段：
+\begin{lstlisting}
+class CNNModel(nn.Module):
+    def __init__(self, vocab_size, embed_dim, seq_len):
+        super(CNNModel, self).__init__()
+        self.embedding = nn.Embedding(vocab_size, embed_dim)
+        self.conv1 = nn.Conv1d(in_channels=embed_dim, out_channels=32, kernel_size=2)       
+        self.pool = nn.AdaptiveMaxPool1d(1)        
+        self.fc = nn.Linear(32, vocab_size)
+    def forward(self, x):
+        embeds = self.embedding(x)
+        embeds = embeds.permute(0, 2, 1)
+        x = torch.relu(self.conv1(embeds))
+        x = self.pool(x).squeeze(-1)   
+        return self.fc(x)
+\end{lstlisting}
 % -------------------- 第四部分 --------------------
 \section{实验结果与分析}
+\section{训练损失曲线}
+\begin{figure}[H]
+    \centering
+    \begin{subfigure}{0.45\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figures/CNN_loss_curve.png}
+        \caption{CNN 训练损失曲线}
+        \label{fig:sub1}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}{0.45\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figures/RNN_loss_curve.png}
+        \caption{RNN 训练损失曲线}
+        \label{fig:sub2}
+    \end{subfigure}
+    \caption{训练损失曲线对比}
+    \label{fig:overall}
+\end{figure}
+在训练30批次的情况下，RNN的损失更低，故认定RNN的词向量效果更好。
+\subsection{词向量展示}
 
-\subsection{训练过程对比}
-% [提示：这里可以插入你训练时的 Loss 截图，如果没有图，可以文字描述]
-在训练过程中观察到，CNN 模型的 Loss 收敛速度较快，说明其在提取局部固定搭配（如“经济发展”）上具有优势；而 RNN 模型在初期震荡后逐渐平稳，最终两者的 Loss 均收敛至 3.0 左右。
-
-\subsection{词向量相似度分析 (Top-10)}
-利用训练好的词向量计算余弦相似度 (Cosine Similarity)，随机选取目标词进行对比分析。
-
-% [提示：把你的 analyze.py 跑出来的结果填几个到这个表里]
 \begin{table}[H]
     \centering
-    \caption{RNN与CNN词向量相似词召回对比}
-    \begin{tabular}{c|l|l}
+    \caption{CNN与RNN模型词向量示例（前8维）}
+    \small
+    \begin{tabular}{c|cccccccc}
         \toprule
-        \textbf{目标词} & \textbf{RNN Top-5 相似词} & \textbf{CNN Top-5 相似词} \\
+        \textbf{词} & \textbf{$d_1$} & \textbf{$d_2$} & \textbf{$d_3$} & \textbf{$d_4$} & \textbf{$d_5$} & \textbf{$d_6$} & \textbf{$d_7$} & \textbf{$d_8$} \\
         \midrule
-        \textbf{中国} & 美国, 国家, 地区, 发展, 关系 & 北京, 国际, 合作, 世界, 建设 \\
+        \multicolumn{9}{c}{\textit{CNN 模型}} \\
         \midrule
-        \textbf{经济} & 建设, 社会, 发展, 改革, 市场 & 金融, 增长, 技术, 结构, 全球 \\
+        中国 & -1.02 & 0.74 & 0.56 & -0.32 & -0.55 & -1.07 & -0.86 & -0.67 \\
         \midrule
-        \textbf{工作} & 会议, 任务, 活动, 领导, 部门 & 决定, 精神, 组织, 开展, 深入 \\
+        \multicolumn{9}{c}{\textit{RNN 模型}} \\
+        \midrule
+        中国 & 0.17 & 1.34 & 0.77 & -2.23 & -0.17 & -2.03 & -0.28 & 0.93 \\
         \bottomrule
     \end{tabular}
 \end{table}
-
-\subsection{结果讨论}
-\begin{enumerate}
-    \item \textbf{语义捕捉能力}：
-    从结果可以看出，RNN 和 CNN 都能学习到一定的语义信息。例如“中国”的近义词中出现了“国家”、“北京”等词汇，符合直觉。
-    
-    \item \textbf{模型差异}：
-    \begin{itemize}
-        \item \textbf{RNN} 倾向于找到\textbf{语法功能相似}的词（如名词找名词，动词找动词），这是因为它在时序预测中学习到了词性规律。
-        \item \textbf{CNN} 倾向于找到\textbf{局部共现频率高}的词，受限于窗口大小（Window Size=2），它更关注短语搭配。
-    \end{itemize}
-    
-    \item \textbf{局限性分析}：
-    由于词表仅限制在 1000 词，且过滤了大量低频词，导致部分目标词的相似词列表中出现了不相关的通用词（如“进行”、“的”等）。这属于 OOV (Out-Of-Vocabulary) 带来的信息损失，可以通过扩大词表和增加训练语料来改善。
-\end{enumerate}
-
-% -------------------- 第五部分 --------------------
-\section{实验总结}
-本次实验成功利用 PyTorch 框架实现了基于 RNN 和 CNN 的语言模型，并提取了汉语词向量。实验表明，即便是在较小的数据集和简单的模型结构下，神经网络依然能够通过上下文预测任务有效地捕捉词汇之间的语义关系。通过对比发现，CNN 在训练效率上略优于 RNN，而 RNN 在处理长距离序列依赖上理论上具有优势。
-
-% -------------------- 附录 --------------------
-\section*{附录：文件清单}
-\begin{itemize}
-    \item \texttt{corpus\_cleaned.txt}: 清洗后的语料库
-    \item \texttt{vocab.json}: 词表字典
-    \item \texttt{train\_rnn.py}: RNN 训练脚本
-    \item \texttt{train\_cnn.py}: CNN 训练脚本
-    \item \texttt{analyze.py}: 相似度分析脚本
-    \item \texttt{model/}: 存放训练好的模型与向量文件
-\end{itemize}
-
+\subsection{词向量对比分析}
+我们选用例如“中国”、“经济”、“发展”等高频词进行对比分析。
 \end{document}
