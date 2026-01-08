@@ -1,0 +1,3 @@
+Qwen3-32B
+Qwen3-8B
+DeepSeek-V3

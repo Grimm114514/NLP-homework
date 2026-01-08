@@ -1,0 +1,8 @@
+{
+    "files.autoSave": "off",
+    "files.candidateGuessEncodings": [
+        "gb2312"
+    ],
+    "files.encoding": "gbk",
+    "files.autoGuessEncoding": true
+}
