@@ -1,3 +1,4 @@
+# -*- coding: gbk -*-
 def to_region(segmentation):
     """
     核心算法：将分词结果转换为区间集合。
@@ -18,8 +19,8 @@ def evaluate(gold_file, pred_file):
     """
     计算 Precision, Recall, F1
     """
-    with open(gold_file, 'r', encoding='utf-8') as fg, \
-         open(pred_file, 'r', encoding='utf-8') as fp:
+    with open(gold_file, 'r', encoding='gbk') as fg, \
+         open(pred_file, 'r', encoding='gbk') as fp:
         
         gold_lines = fg.readlines()
         pred_lines = fp.readlines()
@@ -65,7 +66,7 @@ def evaluate(gold_file, pred_file):
 
 if __name__ == "__main__":
     # 确保这两个文件名正确
-    GOLD_FILE = "gold_standard.txt"  # 标准答案（带空格）
-    PRED_FILE = "result_pred.txt"    # 模型预测（第一步生成的）
+    GOLD_FILE = "./corpus/osam.txt"  # 标准答案（带空格）
+    PRED_FILE = "./pred2/v3.txt"    # 模型预测（第一步生成的）
     
     evaluate(GOLD_FILE, PRED_FILE)
