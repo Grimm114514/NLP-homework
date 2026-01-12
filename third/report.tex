@@ -55,7 +55,7 @@
 % ==================== 文档信息 ====================
 \title{\textbf{自然语言处理实验报告}\\ \large 基于大语言模型的中文分词性能评估与优化}
 \author{姓名：张宗桪 \\ 学号：2023K8009991013 \\ 专业：人工智能}
-\date{\today}
+
 
 \begin{document}
 
@@ -121,7 +121,7 @@ response = client.chat.completions.create(
 	extra_body={
 		"top_k": 50,
 	},
-	frequency_penalty=1,
+	frequency_penalty=1.0
 )
 
 fullResponse = ""
@@ -207,7 +207,7 @@ def main():
     \label{fig:llm_example}
 \end{figure}
 值得注意的是，Qwen3-8B分词结果出现了不稳定结果即前20行的输出以两个空格为间隔分词，但在之后却变成了单个空格。在后面的任务中，Qwen3-8B仍然出现这种不稳定输出。
-\subsection{实验结果}
+\subsection{实验结果与分析}
 表 \ref{tab:pku_result} 展示了三个模型在标准新闻语料上的表现。
 
 \begin{table}[H]
@@ -224,20 +224,12 @@ def main():
         \bottomrule
     \end{tabular}
 \end{table}
+\begin{itemize}
+    \item \textbf{参数量影响}：从实验结果可以看出，模型的参数量与其分词性能呈正相关。同类模型下，Qwen3-32B（32亿参数）在各项指标上均优于Qwen3-8B（8亿参数），显示出更强的语言理解和分词能力。不同模型之间也是如此，DeepSeek-V3 的参数量为671B，也因此在这个任务中它的表现最佳。
+    \item \textbf{DeepSeek-V3的具体分析}：DeepSeek-V3在本次实验中表现最佳，取得了88.55\%的精确率和87.69\%的F1值。除了参数量优势外，DeepSeekMoE架构也是他性能优越的重要因素，相比于传统的 MoE，DeepSeek 将专家切分得更细，细粒度的专家允许模型将不同的语言功能分配给专门的专家模块。这种专业化分工使得模型在面对《人民日报》中严肃且多变的句式时，能更精准地识别语法边界。
+\end{itemize}
 
-\subsection{结果分析}
-实验结果表明，大语言模型在零样本（Zero-shot）设置下的中文分词性能与其参数规模及模型架构呈现显著的正相关性。具体分析如下：
 
-\begin{enumerate}
-    \item \textbf{模型规模效应（Scaling Law）显著}：
-    对比 Qwen3 系列的两个模型，Qwen3-32B 在 F1 值上达到了 85.03\%，相较于 Qwen3-8B 的 76.65\% 提升了约 8.38 个百分点。这表明随着参数量的增加，模型对长难句的语义理解能力和上下文依赖关系的捕捉能力显著增强，能够更准确地处理歧义切分问题。
-
-    \item \textbf{顶级模型的性能优势}：
-    DeepSeek-V3 取得了最优的实验结果（F1=87.69\%），在 Precision 和 Recall 上均全面领先。这主要归因于其更强的推理能力和在大规模中文语料上的充分预训练，使其在处理未登录词（OOV）和特定命名实体识别（NER）时表现更加稳健。
-
-    \item \textbf{分词颗粒度偏好（Precision > Recall）}：
-    观察所有模型的数据发现，准确率（Precision）普遍高于召回率（Recall）。这反映出通用大模型在分词风格上倾向于“粗颗粒度”（Coarse-grained）切分，即倾向于将“新世纪”、“大语言模型”等复合词视为一个整体，而《人民日报》（PKU）标准往往要求将其切分为更细的单元（如“新/世纪”）。这种标准不一致是导致 Recall 相对较低的主要原因。
-\end{enumerate}
 
 % --- 任务二 ---
 \section{自采集文本分词能力测试}
@@ -283,16 +275,15 @@ def main():
     \end{tabular}
 \end{table}
 \begin{itemize}
-    \item \textbf{Qwen3-32B表现优异}：在多源文本上，Qwen3-32B依然展现了强大的分词能力，取得了89.74\%的F1值，显示出其良好的泛化能力。模型能够较好地适应不同文本风格和领域的分词需求。
-    \item \textbf{DeepSeek-V3和Qwen3-8B表现不佳}：DeepSeek-V3未能按照提示词要求进行分词，输出结果与预期差距较大，显示出其在处理多源文本时的局限性。Qwen3-8B则因输出不稳定，导致无法进行有效评估，反映出其在复杂文本处理上的不足。
- 
+    \item \textbf{参数量影响}：与标准语料测试类似，Qwen3-32B在多源文本上的表现依然优于Qwen3-8B，不仅性能提升明显，而且输出格式符合提示词要求，显示出更强的语言理解和分词能力。
+    \item \textbf{反常现象分析}：在本次实验中，DeepSeek-V3的表现不仅不如Qwen3-32B，而且是异常的大幅下降。经分析，原因可能如下：DeepSeek-V3在分词时出现理解偏差，未能正确理解分词的颗粒度，所以他按照汉字一个一个隔开。而Qwen3-32B模型对中文有着很好的场景优化，其内部对分词指令有着极强的默认先验，即使没有示例也能按照词语切分。但是在最后，由于最后两行变成了极度口语化的网络用语，这种文风突变可能使得DeepSeek-V3恢复了按词切分的习惯。
 \end{itemize}
 
 \section{分词性能提升实验}
 \subsection{优化方法：Few-Shot Prompting}
 改进实验，我想验证基于 \textbf{Few-shot (In-Context Learning)} 的优化方法。
 
-构造的 Prompt 包含 4 个典型示例，涵盖了人名、日期和成语的处理规范。
+构造的 Prompt 包含 3 个典型示例，涵盖了人名、日期等处理规范。
 \begin{lstlisting}[language=Python]
 FEW_SHOT_PROMPT = """
 Below are some examples of standard Chinese Word Segmentation:
@@ -309,9 +300,6 @@ Example 3:
 Input: 1997年12月31日
 Output: 1997年 12月 31日
 
-Example 4:
-Input: 提出并实验提升大模型在分词任务上性能的方法
-Output: 提出 并 实验 提升 大 模型 在 分词 任务 上 性能 的 方法
 
 Now, please segment the following lines strictly following the style above.
 """
@@ -332,7 +320,7 @@ Now, please segment the following lines strictly following the style above.
 在引入 Few-shot 提示后，模型的分词性能均有显著提升。但是，Qwen3-8B 仍然存在输出不稳定的问题。DeepSeek-V3 和 Qwen3-32B 则均展现了强劲的分词能力。具体结果如下：
 \begin{table}[H]
     \centering
-    \caption{各模型在《人民日报》测试集上的Few-shot分词性能}
+    \caption{各模型在自采测试集上的Few-shot分词性能}
     \label{tab:few_shot_result}
     \begin{tabular}{l c c c}
         \toprule
@@ -344,7 +332,51 @@ Now, please segment the following lines strictly following the style above.
         \bottomrule
     \end{tabular}
 \end{table}
+具体分析如下：
+\begin{itemize}
+    \item \textbf{Few-shot效果显著}：引入Few-shot示例后，模型的分词性能均有明显提升。通过提供具体的分词示例，模型能够更好地理解任务要求和分词风格，从而提高了准确率和召回率。
+    \item \textbf{DeepSeek-V3明显优化}：DeepSeek-V3在Few-shot提示下表现尤为出色，达到了92.86\%的F1值。这进一步验证了之前的理解偏差假设，通过示例引导，模型能够纠正其分词策略，更加符合预期的分词标准。
+    \item \textbf{Qwen3的差异}：尽管Few-shot提示提升了Qwen3-8B的性能，但其结果任不如其他两款模型。除此之外，Qwen3-32B在Few-shot提示下出现性能负提升，从89.74\%提升到87.61\%。经分析，这可能是因为Few-shot示例与测试文本风格差异较大，如在示例中未出现关于古文的分词，导致模型在处理古文时未能正确应用示例中的分词风格。
+\end{itemize}
+\subsection{Few Shot 提示词改进}
+在ew Shot 提示词中，添加了更多关于古文和网络用语的分词示例，以期提升模型在多源文本上的分词性能。改进后的提示词如下：
+\begin{lstlisting}[language=Python]
+FEW_SHOT_PROMPT = """
+Below are some examples of standard Chinese Word Segmentation:
+
+Input: 迈向充满希望的新世纪
+Output: 迈向 充满 希望 的 新 世纪
+
+Input: 中共中央总书记江泽民
+Output: 中共中央 总书记 江泽民
+
+Input: 即使是这般光景，也不可轻言放弃。
+Output: 即使 是 这般 光景 ， 也 不可 轻言 放弃 。
+
+
+Input: 天有六气，降生五味。
+Output: 天 有 六 气 ， 降生 五味
+
+Now, please segment the following lines strictly following the style above.
+"""
+\end{lstlisting}
+
+\begin{table}[H]
+    \centering
+    \caption{调整Few-shot后Qwen3-32B分词性能}
+    \label{tab:cresult}
+    \begin{tabular}{l c c c}
+        \toprule
+        \textbf{Model} & \textbf{Precision (\%)} & \textbf{Recall (\%)} & \textbf{F1-Score (\%)} \\
+        \midrule
+
+        Qwen3-32B     & 90.97 & 86.14 & 88.48 \\
+        
+        \bottomrule
+    \end{tabular}
+\end{table}
+经过调整 Few-shot 示例后，Qwen3-32B 在多源文本上的分词性能得到了提升，F1值从87.61\%提升至88.48\%。这表明通过如上文的猜想，Few-shot 示例的多样性对模型性能有显著影响。
 \section{结论}
-本实验系统评估了大语言模型在中文分词任务上的表现。实验表明，参数量更大的模型具备更好的语言理解能力，且通过 Few-shot 提示工程可以显著纠正模型的分词风格，使其更贴近特定的标注规范（如 PKU 标准）。
+本实验系统评估了大语言模型在中文分词任务上的表现。实验表明，参数量更大的模型具备更好的语言理解能力，且通过 Few-shot 提示工程可以显著纠正模型的分词风格，使其更贴近特定的标注规范。
 
 \end{document}

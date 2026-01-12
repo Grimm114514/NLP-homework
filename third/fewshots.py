@@ -2,10 +2,10 @@
 import os
 from openai import OpenAI
 
-os.makedirs('./pred4', exist_ok=True)
+os.makedirs('./pred5', exist_ok=True)
 # 1. 配置
 INPUT_FILE = './corpus/other.txt'
-OUTPUT_FILE = './pred4/segmented_data_fewshot.txt' 
+OUTPUT_FILE = './pred5/segmented_data_fewshot.txt' 
 BATCH_SIZE = 5  
 
 # 2. 定义 Few-Shot 示例 (In-Context Learning)
@@ -14,21 +14,18 @@ BATCH_SIZE = 5
 FEW_SHOT_PROMPT = """
 Below are some examples of standard Chinese Word Segmentation:
 
-Example 1:
 Input: 迈向充满希望的新世纪
 Output: 迈向 充满 希望 的 新 世纪
 
-Example 2:
 Input: 中共中央总书记江泽民
 Output: 中共中央 总书记 江泽民
 
-Example 3:
-Input: 1997年12月31日
-Output: 1997年 12月 31日
+Input: 即使是这般光景，也不可轻言放弃。
+Output: 即使 是 这般 光景 ， 也 不可 轻言 放弃 。
 
-Example 4:
-Input: 提出并实验提升大模型在分词任务上性能的方法
-Output: 提出 并 实验 提升 大 模型 在 分词 任务 上 性能 的 方法
+
+Input: 天有六气，降生五味。
+Output: 天 有 六 气 ， 降生 五味
 
 Now, please segment the following lines strictly following the style above.
 """

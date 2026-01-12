@@ -67,6 +67,6 @@ def evaluate(gold_file, pred_file):
 if __name__ == "__main__":
     # 确保这两个文件名正确
     GOLD_FILE = "./corpus/osam.txt"  # 标准答案（带空格）
-    PRED_FILE = "./pred2/v3.txt"    # 模型预测（第一步生成的）
+    PRED_FILE = "./pred5/32.txt"    # 模型预测（第一步生成的）
     
     evaluate(GOLD_FILE, PRED_FILE)
